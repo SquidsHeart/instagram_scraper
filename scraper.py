@@ -4,6 +4,8 @@ import re
 
 import datetime
 
+from config import *
+
 #######################INIT
 
 class scraper:
@@ -15,24 +17,12 @@ class scraper:
     def login(self, username, password):
         time = int(datetime.datetime.now().timestamp())
 
-<<<<<<< HEAD
         login_payload = {
         "username": username,
         "enc_password": "#PWD_INSTAGRAM_BROWSER:0:{time}:{password}".format(time=time, password=password),
         "queryParams": {},
         "optIntoOneTap": "false"
         }
-=======
-def login(username, password):
-    time = int(datetime.datetime.now().timestamp())
-
-    login_payload = {
-    "username": username,
-    "enc_password": "#PWD_INSTAGRAM_BROWSER:0:{time}:{password}".format(time=time, password=password),
-    "queryParams": {},
-    "optIntoOneTap": "false"
-    }
->>>>>>> c5be311 (remove trailing spaces)
 
         login_headers = {
             "User-Agent": "Mozilla/5.0 (X11; Fedora; Linux x86_64; rv:95.0) Gecko/20100101 Firefox/95.0",
@@ -83,20 +73,20 @@ def login(username, password):
         target_url = "https://www.instagram.com/{username}/".format(username=username)
         r = requests.get(url=target_url, headers=self.find_user_data_headers)
         html = r.text
+        comma_cleared_html = html.replace(",", "")
         id = re.findall("profilePage_(\d*?)\"", html)
-        followers = re.findall("content=\"([0-9,]*?) followers", html)
-        following = re.findall("content=\"[0-9,]*? followers, ([0-9,]*?) following", html)
-        posts = re.findall("content=\"[0-9,]* followers, [0-9,]* following, ([0-9,]*) posts", html)
+        followers = re.findall("content=\"(\d*?) followers", comma_cleared_html)
+        following = re.findall("content=\"\d*? followers (\d*?) following", comma_cleared_html)
+        posts = re.findall("content=\"\d* followers \d* following (\d*) posts", comma_cleared_html)
         email = re.findall("\"business_email\":(\w*?),", html)
         phone = re.findall("\"business_phone_number\":(\w*),", html)
         private = re.findall("\"is_private\":(\w*?),", html)
-        
-        print(len(id), len(followers), len(following), len(posts), len(email), len(phone), len(private))
+
         if private[0] == "true":
             private = True
         else:
             private = False
-        return {"id": id[0], "followers": followers[0].replace(",", ""), "following": following[0].replace(",", ""), "posts": posts[0].replace(",", ""), "email": email[0], "phone": phone[0], "public": private}
+        return {"id": id[0], "follower_count": followers[0], "following_count": following[0], "post_amount": posts[0], "email_address": email[0], "phone_number": phone[0], "private": private}
 
     def find_followers(self, id, count=100):
         target_url = "https://i.instagram.com/api/v1/friendships/{id}/followers/?count={count}&search_surface=follow_list_page".format(id=id, count=count)
@@ -104,7 +94,7 @@ def login(username, password):
         json_text = json.loads(r.text)
         user_data = []
         for i in json_text["users"]:
-            user_data.append({"username": i["username"], "fullname": i["full_name"], "id": i["pk"], "public": i["is_private"]})
+            user_data.append({"username": i["username"], "name": i["full_name"],"id": i["pk"],"private": i["is_private"]})
         return user_data
 
     def find_following(self, id, count=100):
@@ -113,10 +103,9 @@ def login(username, password):
         json_text = json.loads(r.text)
         user_data = []
         for i in json_text["users"]:
-            user_data.append({"username": i["username"], "fullname": i["full_name"],"id": i["pk"],"public": i["is_private"]})
+            user_data.append({"username": i["username"], "name": i["full_name"],"id": i["pk"],"private": i["is_private"]})
         return user_data
 
-<<<<<<< HEAD
     def find_mutuals(self, id, count=100):
         followers = self.find_followers(id, count)
         following = self.find_following(id, count)
@@ -131,100 +120,11 @@ def login(username, password):
         mutuals = []
         #makes mutuals list a list of ids which first person follows
         for i in main_followers:
-            mutuals.append(i["id"])
+            mutuals.append(i[2])
 
         index_list = []
         for i in range(0,len(mutuals)):
             index_list.append(i)
-=======
-    if private[0] == "true":
-        private = True
-    else:
-        private = False
-    return id[0], followers[0], following[0], posts[0], email[0], phone[0], private
-
-def find_followers(id, count=100):
-    target_url = "https://i.instagram.com/api/v1/friendships/{id}/followers/?count={count}&search_surface=follow_list_page".format(id=id, count=count)
-    r = requests.get(url=target_url, headers=find_followers_headers)
-    json_text = json.loads(r.text)
-    user_data = []
-    for i in json_text["users"]:
-        user_data.append([i["username"], i["full_name"], i["pk"], i["is_private"]])
-    return user_data
-
-def find_following(id, count=100):
-    target_url = "https://i.instagram.com/api/v1/friendships/{id}/following/?count={count}&search_surface=follow_list_page".format(id=id, count=count)
-    r = requests.get(url=target_url, headers=find_followers_headers)
-    json_text = json.loads(r.text)
-    user_data = []
-    for i in json_text["users"]:
-        user_data.append([i["username"], i["full_name"], i["pk"], i["is_private"]])
-    return user_data
-
-def find_mutuals(id, count=100):
-    followers = find_followers(id, count)
-    following = find_following(id, count)
-    mutuals = []
-    for i in followers:
-        if i in following:
-            mutuals.append(i)
-    return mutuals
-
-def common_followers(usernamelist, count=100):
-    main_followers = find_followers(find_user_data(usernamelist[0])[0])
-    mutuals = []
-    #makes mutuals list a list of ids which first person follows
-    for i in main_followers:
-        mutuals.append(i[2])
-
-    index_list = []
-    for i in range(0,len(mutuals)):
-        index_list.append(i)
-
-    for list in usernamelist[1:]:
-        created_list = []
-        followers = find_followers(find_user_data(list)[0])
-        followers_id = []
-        ####bottom line makes followers_id list of ids for each account
-        for i in followers:
-            followers_id.append(i[2])
-        for i in mutuals:
-            if not i in followers_id:
-                index_list.remove(mutuals.index(i))
-    final_list = []
-    for i in index_list:
-        final_list.append(main_followers[i])
-
-    return final_list
-
-########is this just common followers but with followers changed to following? yes
-def common_following(usernamelist, count=100):
-    main_following = find_following(find_user_data(usernamelist[0])[0])
-    mutuals = []
-    #makes mutuals list a list of ids which first person follows
-    for i in main_following:
-        mutuals.append(i[2])
-
-    index_list = []
-    for i in range(0,len(mutuals)):
-        index_list.append(i)
-
-    for list in usernamelist[1:]:
-        created_list = []
-        following = find_following(find_user_data(list)[0])
-        following_id = []
-        ####bottom line makes following_id list of ids for each account
-        for i in following:
-            following_id.append(i[2])
-        for i in mutuals:
-            if not i in following_id:
-                index_list.remove(mutuals.index(i))
-    final_list = []
-    for i in index_list:
-        final_list.append(main_following[i])
-
-    return final_list
->>>>>>> c5be311 (remove trailing spaces)
 
         for list in usernamelist[1:]:
             created_list = []
@@ -232,7 +132,7 @@ def common_following(usernamelist, count=100):
             followers_id = []
             ####bottom line makes followers_id list of ids for each account
             for i in followers:
-                followers_id.append(i["id"])
+                followers_id.append(i[2])
             for i in mutuals:
                 if not i in followers_id:
                     index_list.remove(mutuals.index(i))
@@ -248,7 +148,7 @@ def common_following(usernamelist, count=100):
         mutuals = []
         #makes mutuals list a list of ids which first person follows
         for i in main_following:
-            mutuals.append(i["id"])
+            mutuals.append(i[2])
 
         index_list = []
         for i in range(0,len(mutuals)):
@@ -260,7 +160,7 @@ def common_following(usernamelist, count=100):
             following_id = []
             ####bottom line makes following_id list of ids for each account
             for i in following:
-                following_id.append(i["id"])
+                following_id.append(i[2])
             for i in mutuals:
                 if not i in following_id:
                     index_list.remove(mutuals.index(i))
@@ -269,4 +169,3 @@ def common_following(usernamelist, count=100):
             final_list.append(main_following[i])
 
         return final_list
-
